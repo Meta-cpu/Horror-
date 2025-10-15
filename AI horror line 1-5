@@ -1,1 +1,74 @@
+[Tooltip("Total memories the player must encounter to progress")]
+public int totalMemories = 3;
 
+[Tooltip("Memories collected by the player so far")]
+public int memoriesCollected = 0;
+
+public MoodController mood;
+public EndingsManager endings;
+
+private void Awake()
+{
+    if (Instance != null && Instance != this)
+    {
+        Destroy(gameObject);
+        return;
+    }
+    Instance = this;
+    DontDestroyOnLoad(gameObject);
+}
+
+private void Start()
+{
+    if (mood == null) mood = FindObjectOfType<MoodController>();
+    if (endings == null) endings = FindObjectOfType<EndingsManager>();
+}
+
+public void MemoryGathered()
+{
+    memoriesCollected++;
+    mood.IncreaseTension(1);
+    if (memoriesCollected >= totalMemories)
+    {
+        endings.TriggerEnding("truth");
+    }
+}
+
+public void TriggerEscapeAttempt()
+{
+    mood.DecreaseTension(1);
+}
+
+private bool shifted = false;
+
+public void ShiftRoomIfNeeded()
+{
+    if (shifted) return;
+
+    foreach (var area in shiftAreas)
+    {
+        if (area != null) area.position += Random.insideUnitSphere * shiftAmount;
+    }
+    shifted = true;
+}
+private void OnTriggerEnter(Collider other)
+{
+    if (other.CompareTag("Player"))
+    {
+        Collect();
+    }
+}
+
+void Collect()
+{
+    // Optional: play a memory reveal effect or show UI.
+    Destroy(gameObject);
+    if (GameManager.Instance != null)
+    {
+        GameManager.Instance.MemoryGathered();
+    }
+
+    // Trigger a room shift if possible
+    var detector = FindObjectOfType<RoomShiftDetector>();
+    if (detector != null) detector.ShiftRoomIfNeeded();
+}
